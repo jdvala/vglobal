@@ -68,10 +68,9 @@ jobs:
           timeout 10s poetry run pip --version || rm -rf .venv
 
       # Repo specific
-
       - name: Install dependencies
-        run: |
-          poetry install
+        if: steps.cached-poetry-dependencies.outputs.cache-hit != 'true'
+        run: poetry install --no-interaction --no-root
 
       - name: Export requirements file from lock file
         run: |
