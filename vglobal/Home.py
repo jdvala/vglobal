@@ -1,7 +1,7 @@
 import streamlit as st
-import serial.tools.list_ports
 import serial
 import time
+from serial.tools import list_ports
 
 st.title("Vistec Tilt Program")
 st.subheader("Axis Values")
@@ -26,7 +26,7 @@ def convert_command(command):
 
 
 def get_serial_ports():
-    ports = [port.device for port in serial.tools.list_ports.comports()]
+    ports = [port.device for port in list_ports.comports()]
     return tuple(ports)
 
 
