@@ -6,6 +6,10 @@ on:
       - main
   pull_request:
 
+defaults:
+  run:
+    shell: bash
+
 jobs:
   Build:
     strategy:
@@ -58,8 +62,6 @@ jobs:
 
       - name: Configure poetry
         run: |
-          Add-Content -Path $env:GITHUB_PATH -Value "$env:USERPROFILE\.poetry\bin"
-          Get-Content -Path $env:GITHUB_PATH
           poetry config experimental.new-installer false
           poetry config virtualenvs.in-project true
 
@@ -75,22 +77,16 @@ jobs:
         if: steps.poetry-cache.outputs.cache-hit == 'true'
         shell: bash
         run: |
-          Add-Content -Path $env:GITHUB_PATH -Value "$env:USERPROFILE\.poetry\bin"
-          Get-Content -Path $env:GITHUB_PATH
           timeout 10s poetry run pip --version || rm -rf .venv
 
       # Repo specific
 
       - name: Install dependencies
         run: |
-          Add-Content -Path $env:GITHUB_PATH -Value "$env:USERPROFILE\.poetry\bin"
-          Get-Content -Path $env:GITHUB_PATH
           poetry install
 
       - name: Export requirements file from lock file
         run: |
-          Add-Content -Path $env:GITHUB_PATH -Value "$env:USERPROFILE\.poetry\bin"
-          Get-Content -Path $env:GITHUB_PATH
           poetry export -f requirements.txt --output requirements.txt
 
       - name: Build the executable
