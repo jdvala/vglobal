@@ -6,10 +6,6 @@ on:
       - main
   pull_request:
 
-defaults:
-  run:
-    shell: bash
-
 jobs:
   Build:
     strategy:
@@ -82,17 +78,18 @@ jobs:
       # Repo specific
 
       - name: Install dependencies
+        shell: bash
         run: |
           poetry install
 
       - name: Export requirements file from lock file
+        shell: bash
         run: |
           poetry export -f requirements.txt --output requirements.txt
 
       - name: Build the executable
+        shell: bash
         run: |
-          Add-Content -Path $env:GITHUB_PATH -Value "$env:USERPROFILE\.poetry\bin"
-          Get-Content -Path $env:GITHUB_PATH
           poetry run pyoxidizer build
 
       - name: Create zip of the build
