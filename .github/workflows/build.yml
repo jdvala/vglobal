@@ -11,7 +11,7 @@ jobs:
     strategy:
       fail-fast: true
       matrix:
-        os: ["ubuntu", "macos", "windows"]
+        os: ["windows"]
         python-version: ["3.10"]
 
     runs-on: ${{ matrix.os }}-latest
@@ -48,16 +48,16 @@ jobs:
       - name: Install Poetry
         uses: snok/install-poetry@v1
         with:
-          version: 1.2.0rc2
+          version: 1.2.0
           virtualenvs-create: true
 
       - name: Update PATH in Windows
-        if: matrix.os == 'windows'
         run: |
           Add-Content -Path $env:GITHUB_PATH -Value "$env:USERPROFILE\.poetry\bin"
           Get-Content -Path $env:GITHUB_PATH
 
       - name: Configure poetry
+        shell: bash
         run: |
           poetry config experimental.new-installer false
           poetry config virtualenvs.in-project true
@@ -79,14 +79,17 @@ jobs:
       # Repo specific
 
       - name: Install dependencies
+        shell: bash
         run: |
           poetry install
 
       - name: Export requirements file from lock file
+        shell: bash
         run: |
           poetry export -f requirements.txt --output requirements.txt
 
       - name: Build the executable
+        shell: bash
         run: |
           poetry run pyoxidizer build
 
@@ -96,6 +99,6 @@ jobs:
 
       - uses: actions/upload-artifact@v3
         with:
-          name: Enopios-${{ runner.os }}
+          name: Vglobal-${{ runner.os }}
           path: |
             release.zip
