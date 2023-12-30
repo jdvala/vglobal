@@ -57,6 +57,7 @@ jobs:
           Get-Content -Path $env:GITHUB_PATH
 
       - name: Configure poetry
+        shell: bash
         run: |
           poetry config experimental.new-installer false
           poetry config virtualenvs.in-project true
