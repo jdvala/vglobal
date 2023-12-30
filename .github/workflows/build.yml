@@ -80,6 +80,8 @@ jobs:
 
       - name: Install dependencies
         run: |
+          Add-Content -Path $env:GITHUB_PATH -Value "$env:USERPROFILE\.poetry\bin"
+          Get-Content -Path $env:GITHUB_PATH
           poetry install
 
       - name: Export requirements file from lock file
