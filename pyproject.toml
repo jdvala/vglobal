@@ -9,6 +9,7 @@ readme = "README.md"
 python = "^3.10"
 streamlit = "^1.29.0"
 serial = "^0.0.97"
+pyserial = "^3.5"
 
 [tool.poetry.dev-dependencies]
 pyoxidizer = "*"
