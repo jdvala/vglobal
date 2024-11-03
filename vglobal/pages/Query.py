@@ -1,23 +1,16 @@
-import streamlit as st
+import logging
 import time
+
+import streamlit as st
+
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
 connection = None
 address = None
 
 commands = {
-    "query_alarm_angle_plus_x": "77 05 {} 21 00 26",
-    "query_alarm_angle_plus_y": "77 05 {} 21 01 27",
-    "query_alarm_angle_minus_x": "77 05 {} 21 02 28",
-    "query_alarm_angle_minus_y": "77 05 {} 21 03 29",
-    "query_alarm_delay_on_time_plus_x": "77 05 {} 24 00 29",
-    "query_alarm_delay_on_time_plus_y": "77 05 {} 24 04 2D",
-    "query_alarm_delay_on_time_minus_x": "77 05 {} 24 02 2B",
-    "query_alarm_delay_on_time_minus_y": "77 05 {} 24 06 2F",
-    "query_alarm_delay_off_time_plus_x": "77 05 {} 24 01 2A",
-    "query_alarm_delay_off_time_plus_y": "77 05 {} 24 05 2E",
-    "query_alarm_delay_off_time_minus_x": "77 05 {} 24 03 2C",
-    "query_alarm_delay_off_time_minus_y": "77 05 {} 24 07 30",
-    "query_zero_type": "77 04 {} 0D 11",
-    
+   "query_zero_type": "77 04 {} 0D 11",
 }
 
 if st.session_state.get("connection") == None and st.session_state.get("address")== None:
@@ -41,6 +34,17 @@ def _parse_zero_type(bytes):
         elif final_zero_type_num == "FF".lower():
             st.markdown(f"**Zero Type**: :red[Relative]")
 
+def calculate_checksum(hex_command: list):
+    command_bytes = hex_command[1:]
+    # Convert strings to int
+    command = [int(a, 16) for a in command_bytes]
+
+    # Calculate the sum of bytes modulo 256 checksum
+    checksum = sum(command) % 256
+
+    # Return checksum as a hexadecimal string
+    return f"{checksum:02X}"
+
 
 def query_zero_type():
     current_command = commands["query_zero_type"].format(address)   
@@ -51,7 +55,7 @@ def query_zero_type():
         zero_type = connection.read_all()
         _parse_zero_type(zero_type)
 
-def _parse_angle(angle):
+def parse_angle(angle):
     angle_hex = ' '.join(hex(byte)[2:].zfill(2) for byte in angle)
     split_angle_hex = angle_hex.split(" ")
     if split_angle_hex:
@@ -64,79 +68,84 @@ def _parse_angle_time(angle):
     angle_hex = ' '.join(hex(byte)[2:].zfill(2) for byte in angle)
     split_angle_hex = angle_hex.split(" ")
     if split_angle_hex:
-        if split_angle_hex[5] == "10":
-            return f"-{split_angle_hex[6]} seconds"
-        else:
-            return f"{split_angle_hex[6]} seconds"
+        return f"{split_angle_hex[5]} seconds {split_angle_hex[6]} miliseconds"
 
-def query_alarm_angle():
-    current_command_plus_x = commands["query_alarm_angle_plus_x"].format(address)
-    current_command_minus_x = commands["query_alarm_angle_minus_x"].format(address)
-    current_command_plus_y = commands["query_alarm_angle_plus_y"].format(address)
-    current_command_minus_y = commands["query_alarm_angle_minus_y"].format(address)
+base_alarm_angle_command = ["77", "05", address, "21"]
 
-    converted_command_plus_x = convert_command(command=current_command_plus_x)
-    converted_command_minus_x = convert_command(command=current_command_minus_x)
-    converted_command_plus_y = convert_command(command=current_command_plus_y)
-    converted_command_minus_y = convert_command(command=current_command_minus_y)
+angle_bytes = {
+    "+X": "00",
+    "+Y": "01",
+    "-X": "02",
+    "-Y": "03"
+}
 
-    command_dict = {
-        "Alarm Angle +X": converted_command_plus_x,
-        "Alarm Angle -X": converted_command_minus_x,
-        "Alarm Angle +Y": converted_command_plus_y,
-        "Alarm Angle -Y": converted_command_minus_y
-    }
+def process_alarm_angle_command(base_alarm_command: list, angle_value: str, angle_byte: str):
+    logger.info(f"Base command found for {angle_value}: {base_alarm_command}")
+    tmp_command = []
+    tmp_command = base_alarm_command.copy()
+    tmp_command.append(angle_byte)
+    checksum = calculate_checksum(tmp_command)
+    tmp_command.append(checksum)
+    final_command = " ".join(tmp_command)
+    logger.info(f"Final command {angle_value} = {final_command}")
+    connection.write(convert_command(final_command))
+    time.sleep(0.1)
+    resp = connection.readall()
+    logger.info(f"Final reponse for {angle_value} is {resp.hex()}")
+    return resp
 
-    response = []
+def query_alarm_angle():  
+    for key, value in angle_bytes.items():
+        response = process_alarm_angle_command(base_alarm_angle_command, key, value)
+        angle = parse_angle(response)
+        st.markdown(f"**{key}**: :orange[{angle}]")
+
+delay_on_time_base_command = ["77", "05", address, "24"]
+
+delay_on_axis = {
+    "+X": "00",
+    "-X": "02",
+    "+Y": "04",
+    "-Y": "06"
+}
+
+delay_off_axis = {
+    "+X": "01",
+    "-X": "03",
+    "+Y": "05",
+    "-Y": "07"
+}
+
+
+def process_delay_time(command_int, axis, axis_value):
+    command = []
+    command = command_int.copy()
+    command.append(axis_value)
+    checksum = calculate_checksum(command)
+    command.append(checksum)
+    final_command = " ".join(command)
+    logger.info(f"Final command {axis} = {final_command}")
+    connection.write(convert_command(final_command))
+    time.sleep(0.1)
+    resp = connection.readall()
+    logger.info(f"Final reponse for delay_on_time {axis} is {resp.hex()}")
+    return resp
+
+def query_alarm_delay_on_time():
     if connection:
-        for key, item in command_dict.items():
-            connection.write(item)
-            time.sleep(0.2)
-            resp = connection.read_all()
-            angle = _parse_angle(resp)
-            st.markdown(f"**{key}**: :orange[{angle}]")
-
-
-
-def query_alarm_delay_time():
-    current_command_on_plus_x = commands["query_alarm_delay_on_time_plus_x"].format(address)
-    current_command_on_minus_x = commands["query_alarm_delay_on_time_minus_x"].format(address)
-    current_command_on_plus_y = commands["query_alarm_delay_on_time_plus_y"].format(address)
-    current_command_on_minus_y = commands["query_alarm_delay_on_time_minus_y"].format(address)
-    current_command_off_plus_x = commands["query_alarm_delay_off_time_plus_x"].format(address)
-    current_command_off_minus_x = commands["query_alarm_delay_off_time_minus_x"].format(address)
-    current_command_off_plus_y = commands["query_alarm_delay_off_time_plus_y"].format(address)
-    current_command_off_minus_y = commands["query_alarm_delay_off_time_minus_y"].format(address)
-    
-
-    converted_command_on_plus_x = convert_command(command=current_command_on_plus_x)
-    converted_command_on_minus_x = convert_command(command=current_command_on_minus_x)
-    converted_command_on_plus_y = convert_command(command=current_command_on_plus_y)
-    converted_command_on_minus_y = convert_command(command=current_command_on_minus_y)
-    converted_command_off_plus_x = convert_command(command=current_command_off_plus_x)
-    converted_command_off_minus_x = convert_command(command=current_command_off_minus_x)
-    converted_command_off_plus_y = convert_command(command=current_command_off_plus_y)
-    converted_command_off_minus_y = convert_command(command=current_command_off_minus_y)
-
-    command_dict = {
-        "Alarm Delay On Time +X": converted_command_on_plus_x,
-        "Alarm Delay On Time -X": converted_command_on_minus_x,
-        "Alarm Delay On Time +Y": converted_command_on_plus_y,
-        "Alarm Delay On Time -Y": converted_command_on_minus_y,
-        "Alarm Delay Off Time +X": converted_command_off_plus_x,
-        "Alarm Delay Off Time -X": converted_command_off_minus_x,
-        "Alarm Delay Off Time +Y": converted_command_off_plus_y,
-        "Alarm Delay Off Time -Y": converted_command_off_minus_y
-    }
-
-    if connection:
-        for key, item in command_dict.items():
-            connection.write(item)
-            time.sleep(0.2)
-            resp = connection.read_all()
+        for key, value in delay_on_axis.items():
+            resp = process_delay_time(delay_on_time_base_command, key, value)
             angle = _parse_angle_time(resp)
             st.markdown(f"**{key}**: :green[{angle}]")
+        
 
+def query_alarm_delay_off_time():
+    if connection:
+        for key, value in delay_off_axis.items():
+            resp = process_delay_time(delay_on_time_base_command, key, value)
+            angle = _parse_angle_time(resp)
+            st.markdown(f"**{key}**: :green[{angle}]")
+        
 
 
 
@@ -147,10 +156,19 @@ if connection and address:
 
     with col1:
         st.subheader("Zero Type")
-        query_zero_type()
+        if col1.button("Query Zero Type", key="query zero type"):
+            query_zero_type()
     with col2:
         st.subheader("Alarm Angle")
-        query_alarm_angle()
+        if col2.button("Query Alarm Angle", key="query alarm angle"):
+            query_alarm_angle()
     st.divider()
-    st.subheader("Alarm Delay Time")
-    query_alarm_delay_time()
+    
+    st.subheader("Alarm Delay ON Time")
+    if st.button("Query Alarm Delay On Time", key="query delay on time"):
+        query_alarm_delay_on_time()
+    
+    st.subheader("Alarm Delay OFF Time")
+    
+    if st.button("Query Alarm Delay Off Time", key="query delay off time"):
+        query_alarm_delay_off_time()

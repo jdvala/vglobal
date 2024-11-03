@@ -1,7 +1,8 @@
-import streamlit as st
-import serial
 import time
-from serial.tools import list_ports
+
+import serial
+import serial.tools.list_ports
+import streamlit as st
 
 st.title("Vistec Tilt Program")
 st.subheader("Axis Values")
@@ -26,7 +27,7 @@ def convert_command(command):
 
 
 def get_serial_ports():
-    ports = [port.device for port in list_ports.comports()]
+    ports = [port.device for port in serial.tools.list_ports.comports()]
     return tuple(ports)
 
 
@@ -36,13 +37,14 @@ def esstlish_connection(port, baud_rate):
         global connection 
         connection = serial.Serial(port, baud_rate, timeout=1)
         st.session_state.connection = connection
-        st.toast("Connection Successful")
     except ValueError:
         st.error("Connection parameters are wrong!")
         return None
-    except serial.SerialException:
+    except serial.serialutil.SerialException:
         st.error("Physical problem with device connection or Please press connect button")
-        return None 
+        return None
+    if connection:
+        st.toast("Connection Successful")
     
     
 
@@ -76,21 +78,27 @@ def _process_x_y(raw_x, raw_y, raw_z):
             final_x = f"-{raw_x[1]}.{raw_x[2]}"
         elif raw_x[0] == "00":
             final_x = f"{raw_x[1]}.{raw_x[2]}"
+        elif raw_x[0] == "01":
+            final_x = f"{raw_x[0][1]}{raw_x[1]}.{raw_x[2]}"
         if raw_y[0] == "10":
             final_y = f"-{raw_y[1]}.{raw_y[2]}"
         elif raw_y[0] == "00":
             final_y = f"{raw_y[1]}.{raw_y[2]}"
+        elif raw_y[0] == "01":
+            final_y = f"{raw_y[0][1]}{raw_y[1]}.{raw_y[2]}"
         if raw_z[0] == "10":
             final_z = f"-{raw_z[1]}.{raw_z[2]}"
         elif raw_z[0] == "00":
             final_z = f"{raw_z[1]}.{raw_z[2]}"
+        elif raw_z[0] == "01":
+            final_z = f"{raw_z[0][1]}{raw_z[1]}.{raw_z[2]}"
+
     
     #print(final_x, final_y)
     return final_x, final_y, final_z
 
 def _parse_x_y_axis(axis_vals):
     parsed_xy_vlaues = ' '.join(hex(byte)[2:].zfill(2) for byte in axis_vals)
-    #breakpoint()
     if parsed_xy_vlaues:
         splited_xy_values = parsed_xy_vlaues.split(" ")
         raw_x_axis = splited_xy_values[4:7] 
