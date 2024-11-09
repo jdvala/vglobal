@@ -39,10 +39,10 @@ def make_exe():
     exe.windows_runtime_dlls_mode = "always"
     exe.windows_subsystem = "console"
 
-    # Add the python310.dll file as a resource using the FileManifest
-    manifest = exe.get_python_resource_file_manifest()
-    manifest.add_file(
-        source_path=dist.get_python_dll_path(),
+    # Manually add python310.dll
+    dll_path = dist.get_embedded_python_dll_path()
+    exe.add_file(
+        source_path=dll_path,
         dest_path="python310.dll",
     )
 
