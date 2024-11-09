@@ -40,9 +40,9 @@ def make_exe():
     exe.windows_subsystem = "console"
 
     # Manually add python310.dll
-    dll_path = dist.get_embedded_python_dll_path()
+    # Specify the path to python310.dll manually
     exe.add_file(
-        source_path=dll_path,
+        source_path="path/to/your/python310.dll",  # <-- Replace this with the actual path
         dest_path="python310.dll",
     )
 
