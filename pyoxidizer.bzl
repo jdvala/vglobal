@@ -39,8 +39,12 @@ def make_exe():
     exe.windows_runtime_dlls_mode = "always"
     exe.windows_subsystem = "console"
 
-    # Add the python310.dll file explicitly
-    exe.add_python_resources(exe.copy_from_python_distribution("python310.dll"))
+    # Add the python310.dll file as a resource using the FileManifest
+    manifest = exe.get_python_resource_file_manifest()
+    manifest.add_file(
+        source_path=dist.get_python_dll_path(),
+        dest_path="python310.dll",
+    )
 
     exe.add_python_resources(exe.pip_install(["-r", "requirements.txt"]))
     exe.add_python_resources(exe.pip_install(["."]))
