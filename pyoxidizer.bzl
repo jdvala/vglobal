@@ -27,11 +27,18 @@ def make_exe():
     exe.add_python_resources(exe.pip_install(["."]))
 
     # For Windows, we need to ensure the Python DLL is available
-    if exe.target_triple.platform == "windows":
-        # This will copy the python DLL and other necessary files
+    import sys
+    if sys.platform == "win32":
+        # Add DLLs from the Python distribution
         exe.add_python_resources(exe.read_package_root(
             dist.python_distribution.python_stdlib_path(),
-            ["python310.dll", "*.pyd", "*.dll"],
+            ["*.pyd", "*.dll"],
+        ))
+        
+        # Explicitly add the Python DLL
+        exe.add_python_resources(exe.read_package_root(
+            dist.python_distribution.python_install_path(),
+            ["python310.dll"],
         ))
     
     return exe
