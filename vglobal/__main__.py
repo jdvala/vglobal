@@ -9,6 +9,7 @@ def app():
     bootstrap.run(
         str(HERE.joinpath("Home.py")),
         args=list(),
+        is_hello=False,
         flag_options=dict(),
     )
 
