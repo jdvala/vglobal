@@ -1,17 +1,3 @@
-# Copyright (C) 2021 Radiotherapy AI Pty Ltd
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#     http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
-
 def make_exe():
     dist = default_python_distribution(python_version="3.10")
 
@@ -20,7 +6,6 @@ def make_exe():
 
     # site-packages is required here so that streamlit doesn't boot in
     # development mode:
-    # https://github.com/streamlit/streamlit/blob/953dfdbe/lib/streamlit/config.py#L255-L267
     policy.resources_location = "filesystem-relative:site-packages"
 
     python_config = dist.make_python_interpreter_config()
@@ -39,15 +24,14 @@ def make_exe():
     exe.windows_runtime_dlls_mode = "always"
     exe.windows_subsystem = "console"
 
-    # Manually add python310.dll
-    # Specify the path to python310.dll manually
-    exe.add_file(
-        source_path="path/to/your/python310.dll",  # <-- Replace this with the actual path
-        dest_path="python310.dll",
-    )
-
+    # Add all the resources from pip installations
     exe.add_python_resources(exe.pip_install(["-r", "requirements.txt"]))
     exe.add_python_resources(exe.pip_install(["."]))
+
+    # Add python310.dll explicitly from the Python distribution
+    # Ensure this step works correctly on Windows by adding a manifest
+    dll_manifest = dist.to_file_manifest()
+    dll_manifest.add_python_resource(".", exe)
 
     return exe
 
