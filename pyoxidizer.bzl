@@ -28,10 +28,9 @@ def make_exe():
     exe.add_python_resources(exe.pip_install(["-r", "requirements.txt"]))
     exe.add_python_resources(exe.pip_install(["."]))
 
-    # Add python310.dll explicitly from the Python distribution
-    # Ensure this step works correctly on Windows by adding a manifest
-    dll_manifest = dist.to_file_manifest()
-    dll_manifest.add_python_resource(".", exe)
+    # Ensure Windows DLLs, like python310.dll, are bundled correctly
+    # Use exe.add_resources_from_windows_python_distribution() to handle this
+    exe.add_resources_from_windows_python_distribution()
 
     return exe
 
