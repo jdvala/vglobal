@@ -8,8 +8,8 @@ readme = "README.md"
 [tool.poetry.dependencies]
 python = "^3.10"
 streamlit = "^1.29.0"
-serial = "^0.0.97"
 pyserial = "^3.5"
+urllib3 = "1.26.9"
 
 [tool.poetry.dev-dependencies]
 pyoxidizer = "*"
